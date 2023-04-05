@@ -1,4 +1,8 @@
-export const FormatResponse = (statusCode: number, message: string, data: unknown) => {
+export const FormatResponse = (
+  statusCode: number,
+  message: string,
+  data: any
+) => {
   if (data) {
     return {
       statusCode,
@@ -34,7 +38,7 @@ export const SuccessfullyCreated = (data: object) => {
 };
 
 /* ERROR */
-export const ErrorMessage = (code: 1000, error: unknown) => {
+export const ErrorMessage = (code = 1000, error: any) => {
   if (Array.isArray(error)) {
     const errorObject = error[0].constraints;
     const errorMessage =

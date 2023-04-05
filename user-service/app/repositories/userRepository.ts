@@ -1,3 +1,3 @@
-class UserRepository {
+export class UserRepository {
   constructor() {}
 }
