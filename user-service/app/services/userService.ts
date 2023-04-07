@@ -1,7 +1,13 @@
-import { SuccessMessage } from "../utils/response";
+import { ErrorMessage, SuccessMessage } from "../utils/response";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { UserRepository } from "../repositories/userRepository";
 import { autoInjectable } from "tsyringe";
+import { plainToClass } from "class-transformer";
+import { AppValidationError } from "../utils/errors";
+import { SignupInput } from "../models/dto/SignupInput";
+import { genSalt } from "bcrypt";
+import { genHashPassword } from "../utils/password";
+import { getAge } from "../utils/user";
 
 @autoInjectable()
 export class UserService {
@@ -12,10 +18,34 @@ export class UserService {
 
   /* USER SIGN UP */
   async CreateUser(event: APIGatewayProxyEventV2) {
-    const body = event.body;
-    console.log(body);
-    // business logic
-    return SuccessMessage({ message: "message from signup" });
+    try {
+      const input = plainToClass(SignupInput, event.body);
+      const error = await AppValidationError(input);
+      if (error) {
+        return ErrorMessage(404, error);
+      }
+      const salt = await genSalt();
+      const hashPassword = await genHashPassword(salt, input.password);
+
+      const age = await getAge(input.dateOfBirth);
+
+      const response = await this.repository.CreateUserAccount({
+        email: input.email,
+        phoneNumber: input.phoneNumber,
+        password: hashPassword,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        salt: salt,
+        dateOfBirth: input.dateOfBirth,
+        age: age,
+        userType: "BUYER",
+        gender: input.gender,
+      });
+
+      return SuccessMessage(response);
+    } catch (err) {
+      return ErrorMessage(500, err);
+    }
   }
 
   /* USER SIGN IN */
