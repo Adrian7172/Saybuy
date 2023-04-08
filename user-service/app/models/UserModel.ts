@@ -1,13 +1,13 @@
 export interface UserModel {
-  userId?: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: Date;
+  user_id?: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: Date;
   age: number;
   email: string;
-  phoneNumber: string;
+  phone_number: string;
   salt: string;
   password: string;
-  userType: "BUYER" | "SELLER";
+  user_type: "BUYER" | "SELLER";
   gender: string;
 }

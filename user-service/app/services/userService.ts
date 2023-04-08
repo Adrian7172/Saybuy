@@ -1,13 +1,17 @@
-import { ErrorMessage, SuccessMessage } from "../utils/response";
+import {
+  ErrorMessage,
+  SuccessMessage,
+  SuccessfullyCreated,
+} from "../utils/response";
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { UserRepository } from "../repositories/userRepository";
 import { autoInjectable } from "tsyringe";
 import { plainToClass } from "class-transformer";
 import { AppValidationError } from "../utils/errors";
-import { SignupInput } from "../models/dto/SignupInput";
+import { SignupInput, SigninInput } from "../models/dto";
 import { genSalt } from "bcrypt";
-import { genHashPassword } from "../utils/password";
-import { getAge } from "../utils/user";
+import { genHashPassword, validatePassword } from "../utils/password";
+import { getAge, getToken } from "../utils/user";
 
 @autoInjectable()
 export class UserService {
@@ -24,25 +28,31 @@ export class UserService {
       if (error) {
         return ErrorMessage(404, error);
       }
+
+      const user = await this.repository.findUserAccount(input.email);
+      if (user) {
+        return ErrorMessage(400, "user with this email already exist.");
+      }
+
       const salt = await genSalt();
       const hashPassword = await genHashPassword(salt, input.password);
 
-      const age = await getAge(input.dateOfBirth);
+      const age = await getAge(input.date_of_birth);
 
       const response = await this.repository.CreateUserAccount({
         email: input.email,
-        phoneNumber: input.phoneNumber,
+        phone_number: input.phone_number,
         password: hashPassword,
-        firstName: input.firstName,
-        lastName: input.lastName,
-        salt: salt,
-        dateOfBirth: input.dateOfBirth,
+        first_name: input.first_name,
+        last_name: input.last_name,
+        date_of_birth: input.date_of_birth,
         age: age,
-        userType: "BUYER",
+        user_type: "BUYER",
+        salt: salt,
         gender: input.gender,
       });
 
-      return SuccessMessage(response);
+      return SuccessfullyCreated(response);
     } catch (err) {
       return ErrorMessage(500, err);
     }
@@ -50,8 +60,43 @@ export class UserService {
 
   /* USER SIGN IN */
   async SigninUser(event: APIGatewayProxyEventV2) {
-    // business logic
-    return SuccessMessage({ message: "message from signin" });
+    try {
+      const input = plainToClass(SigninInput, event.body);
+      const error = await AppValidationError(input);
+
+      if (error) {
+        return ErrorMessage(404, error);
+      }
+
+      const user = await this.repository.findUserAccount(input.email);
+      if (!user) {
+        return ErrorMessage(400, "user doesn't exist!");
+      }
+
+      const isValidUser = await validatePassword(
+        input.password,
+        user.password,
+        user.salt
+      );
+
+      if (!isValidUser) {
+        return ErrorMessage(400, "password doesn't match!");
+      }
+
+      /* make db and every word right */
+
+      // JWT TOKEN
+      // const token = getToken({
+      //   userId: user.user_id,
+      //   password: user.password,
+      //   email: user.email,
+      //   userType: user.user_type,
+      // });
+
+      return SuccessMessage(user);
+    } catch (err) {
+      return ErrorMessage(500, err);
+    }
   }
 
   /* USER VERIFICATION */

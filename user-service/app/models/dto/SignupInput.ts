@@ -3,16 +3,16 @@ import { IsDateString, Length } from "class-validator";
 
 export class SignupInput extends SigninInput {
   @Length(10, 13)
-  phoneNumber: string;
+  phone_number: string;
 
   @Length(2, 20)
-  firstName: string;
+  first_name: string;
 
   @Length(2, 20)
-  lastName: string;
+  last_name: string;
 
   @IsDateString()
-  dateOfBirth: Date;
+  date_of_birth: Date;
 
   gender: string;
 }
