@@ -11,7 +11,11 @@ import { AppValidationError } from "../utils/errors";
 import { SignupInput, SigninInput } from "../models/dto";
 import { genSalt } from "bcrypt";
 import { genHashPassword, validatePassword } from "../utils/password";
-import { getAge, getToken } from "../utils/user";
+import { getAge, getToken, verifyToken } from "../utils/user";
+import {
+  generateAccessToken,
+  sendVerificationToken,
+} from "../utils/notification";
 
 @autoInjectable()
 export class UserService {
@@ -37,19 +41,12 @@ export class UserService {
       const salt = await genSalt();
       const hashPassword = await genHashPassword(salt, input.password);
 
-      const age = await getAge(input.date_of_birth);
-
       const response = await this.repository.CreateUserAccount({
         email: input.email,
         phone_number: input.phone_number,
         password: hashPassword,
-        first_name: input.first_name,
-        last_name: input.last_name,
-        date_of_birth: input.date_of_birth,
-        age: age,
         user_type: "BUYER",
         salt: salt,
-        gender: input.gender,
       });
 
       return SuccessfullyCreated(response);
@@ -68,6 +65,7 @@ export class UserService {
         return ErrorMessage(404, error);
       }
 
+      //if user exist already
       const user = await this.repository.findUserAccount(input.email);
       if (!user) {
         return ErrorMessage(400, "user doesn't exist!");
@@ -83,25 +81,30 @@ export class UserService {
         return ErrorMessage(400, "password doesn't match!");
       }
 
-      /* make db and every word right */
-
       // JWT TOKEN
-      // const token = getToken({
-      //   userId: user.user_id,
-      //   password: user.password,
-      //   email: user.email,
-      //   userType: user.user_type,
-      // });
+      const token = getToken(user);
 
-      return SuccessMessage(user);
+      return SuccessMessage({ token });
     } catch (err) {
       return ErrorMessage(500, err);
     }
   }
 
   /* USER VERIFICATION */
+  async GetVerificationToken(event: APIGatewayProxyEventV2) {
+    const token = event.headers.authorization;
+    const payload = await verifyToken(token);
+    if (payload) {
+      const { code, expiry } = generateAccessToken();
+      // save in db
+      const response = await sendVerificationToken(code, payload.phone_number);
+      return SuccessMessage({
+        message: "verification code is send to the mobile number",
+      });
+    }
+  }
+
   async VerifyUser(event: APIGatewayProxyEventV2) {
-    // business logic
     return SuccessMessage({ message: "message from verify user" });
   }
 

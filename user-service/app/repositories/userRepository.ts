@@ -1,55 +1,39 @@
-import { dbClient } from "../utils/dbClient";
 import { UserModel } from "../models/UserModel";
+import { DbOperation } from "./dbOperations";
 
-export class UserRepository {
-  constructor() {}
+export class UserRepository extends DbOperation {
+  constructor() {
+    super();
+  }
 
   async CreateUserAccount({
     email,
     phone_number,
     password,
-    first_name,
-    last_name,
-    date_of_birth,
-    age,
     user_type,
     salt,
-    gender,
   }: UserModel) {
-    const client = await dbClient();
-    await client.connect();
     const queryString =
-      "INSERT INTO users (email, phone_number, password, first_name, last_name, date_of_birth, age, user_type, salt, gender) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *";
+      "INSERT INTO users (email, phone_number, password, user_type, salt) VALUES($1, $2, $3, $4, $5) RETURNING *";
     const values = [
       email,
       phone_number,
       password,
-      first_name,
-      last_name,
-      date_of_birth,
-      age,
       user_type,
       salt,
-      gender,
     ];
-
-    const response = await client.query(queryString, values);
-    await client.end();
-
+    const response = await this.executeQuery(queryString, values);
     if (response.rowCount > 0) {
       return response.rows[0] as UserModel;
     }
   }
 
-  async findUserAccount(email: string) {
-    const client = await dbClient();
-    client.connect();
 
+  async findUserAccount(email: string) {
     const queryString =
-      "SELECT user_id, email, password, salt, user_type FROM users WHERE email = $1";
+      "SELECT user_id, email, password, salt, user_type, phone_number FROM users WHERE email = $1";
     const values = [email];
-    const response = await client.query(queryString, values);
-    client.end();
+    const response = await this.executeQuery(queryString, values);
 
     if (response.rowCount > 0) {
       return response.rows[0];

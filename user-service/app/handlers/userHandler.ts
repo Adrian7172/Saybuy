@@ -1,4 +1,3 @@
-
 import middy from "@middy/core";
 import jsonBodyParser from "@middy/http-json-body-parser";
 
@@ -18,7 +17,15 @@ export const Signin = middy((event: APIGatewayProxyEventV2) => {
 }).use(jsonBodyParser());
 
 export const Verify = async (event: APIGatewayProxyEventV2) => {
-  return service.VerifyUser(event);
+  const httpMethod = event.requestContext.http.method.toUpperCase();
+
+  if (httpMethod === "GET") {
+    return service.GetVerificationToken(event);
+  } else if (httpMethod === "POST") {
+    return service.VerifyUser(event);
+  } else {
+    return ErrorMessage(404, "requested method is not supported!");
+  }
 };
 
 export const Profile = async (event: APIGatewayProxyEventV2) => {
