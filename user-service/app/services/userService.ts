@@ -6,9 +6,9 @@ import {
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { UserRepository } from "../repositories/userRepository";
 import { autoInjectable } from "tsyringe";
-import { plainToClass } from "class-transformer";
+import { plainToClass, plainToClassFromExist } from "class-transformer";
 import { AppValidationError } from "../utils/errors";
-import { SignupInput, SigninInput } from "../models/dto";
+import { SignupInput, SigninInput, VerificationInput } from "../models/dto";
 import { genSalt } from "bcrypt";
 import { genHashPassword, validatePassword } from "../utils/password";
 import { getAge, getToken, verifyToken } from "../utils/user";
@@ -16,12 +16,19 @@ import {
   generateAccessToken,
   sendVerificationToken,
 } from "../utils/notification";
+import { timeDifference } from "../utils/verifyExpiryDate";
 
 @autoInjectable()
 export class UserService {
   repository: UserRepository;
+  
   constructor(repository: UserRepository) {
     this.repository = repository;
+  }
+
+  /* Responses with the error */
+  async ResponseWithErrors(event: APIGatewayProxyEventV2) {
+    return ErrorMessage(404, "requested method is not supported!");
   }
 
   /* USER SIGN UP */
@@ -33,7 +40,7 @@ export class UserService {
         return ErrorMessage(404, error);
       }
 
-      const user = await this.repository.findUserAccount(input.email);
+      const user = await this.repository.FindUserAccount(input.email);
       if (user) {
         return ErrorMessage(400, "user with this email already exist.");
       }
@@ -66,7 +73,7 @@ export class UserService {
       }
 
       //if user exist already
-      const user = await this.repository.findUserAccount(input.email);
+      const user = await this.repository.FindUserAccount(input.email);
       if (!user) {
         return ErrorMessage(400, "user doesn't exist!");
       }
@@ -92,20 +99,63 @@ export class UserService {
 
   /* USER VERIFICATION */
   async GetVerificationToken(event: APIGatewayProxyEventV2) {
-    const token = event.headers.authorization;
-    const payload = await verifyToken(token);
-    if (payload) {
+    try {
+      const token = event.headers.authorization;
+      const payload = await verifyToken(token);
+      if (!payload) {
+        return ErrorMessage(403, "authorization failed");
+      }
+
       const { code, expiry } = generateAccessToken();
-      // save in db
-      const response = await sendVerificationToken(code, payload.phone_number);
+      await this.repository.UpdateVerificationCode(
+        payload.user_id,
+        code,
+        expiry
+      );
+      // const response = await sendVerificationToken(code, payload.phone_number);
       return SuccessMessage({
         message: "verification code is send to the mobile number",
       });
+    } catch (err) {
+      return ErrorMessage(500, err);
     }
   }
 
   async VerifyUser(event: APIGatewayProxyEventV2) {
-    return SuccessMessage({ message: "message from verify user" });
+    try {
+      const token = event.headers.authorization;
+      const payload = await verifyToken(token);
+      if (!payload) return ErrorMessage(403, "authorization failed");
+
+      const input = plainToClass(VerificationInput, event.body);
+      const error = await AppValidationError(input);
+
+      if (error) {
+        return ErrorMessage(404, error);
+      }
+
+      //find the user
+      const { verification_code, expiry } =
+        await this.repository.FindUserAccount(payload.email);
+
+      const isMatched = Boolean(verification_code == input.verification_code);
+      if (isMatched === false) {
+        return ErrorMessage(403, "Verification code didn't matched.");
+      }
+      // check for expiry date
+      const currDate = new Date();
+      const timeDiff = timeDifference(expiry, currDate, "m");
+      console.log(timeDiff);
+      if (timeDiff <= 0) {
+        return ErrorMessage(403, "Verification code is expired!");
+      }
+      // update on DB
+      await this.repository.UpdateUserVerification(payload.user_id);
+
+      return SuccessMessage({ message: "User Verified!" });
+    } catch (err) {
+      return ErrorMessage(500, err);
+    }
   }
 
   /* CREATE PROFILE */

@@ -16,7 +16,7 @@ export const Signin = middy((event: APIGatewayProxyEventV2) => {
   return service.SigninUser(event);
 }).use(jsonBodyParser());
 
-export const Verify = async (event: APIGatewayProxyEventV2) => {
+export const Verify = middy((event: APIGatewayProxyEventV2) => {
   const httpMethod = event.requestContext.http.method.toUpperCase();
 
   if (httpMethod === "GET") {
@@ -24,11 +24,11 @@ export const Verify = async (event: APIGatewayProxyEventV2) => {
   } else if (httpMethod === "POST") {
     return service.VerifyUser(event);
   } else {
-    return ErrorMessage(404, "requested method is not supported!");
+    return service.ResponseWithErrors(event);
   }
-};
+}).use(jsonBodyParser());
 
-export const Profile = async (event: APIGatewayProxyEventV2) => {
+export const Profile = middy((event: APIGatewayProxyEventV2) => {
   const httpMethod = event.requestContext.http.method.toUpperCase();
 
   if (httpMethod === "GET") {
@@ -38,11 +38,11 @@ export const Profile = async (event: APIGatewayProxyEventV2) => {
   } else if (httpMethod === "PUT") {
     return service.UpdateProfile(event);
   } else {
-    return ErrorMessage(404, "requested method is not supported!");
+    return service.ResponseWithErrors(event);
   }
-};
+}).use(jsonBodyParser());
 
-export const Cart = async (event: APIGatewayProxyEventV2) => {
+export const Cart = middy((event: APIGatewayProxyEventV2) => {
   const httpMethod = event.requestContext.http.method.toUpperCase();
 
   if (httpMethod === "GET") {
@@ -52,11 +52,11 @@ export const Cart = async (event: APIGatewayProxyEventV2) => {
   } else if (httpMethod === "PUT") {
     return service.UpdateCart(event);
   } else {
-    return ErrorMessage(404, "requested method is not supported!");
+    return service.ResponseWithErrors(event);
   }
-};
+}).use(jsonBodyParser());
 
-export const Payment = async (event: APIGatewayProxyEventV2) => {
+export const Payment = middy((event: APIGatewayProxyEventV2) => {
   const httpMethod = event.requestContext.http.method.toUpperCase();
 
   if (httpMethod === "GET") {
@@ -66,6 +66,6 @@ export const Payment = async (event: APIGatewayProxyEventV2) => {
   } else if (httpMethod === "PUT") {
     return service.UpdatePaymentMethod(event);
   } else {
-    return ErrorMessage(404, "requested method is not supported!");
+    return service.ResponseWithErrors(event);
   }
-};
+}).use(jsonBodyParser());
