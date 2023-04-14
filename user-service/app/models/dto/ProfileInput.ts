@@ -1,6 +1,8 @@
 import { IsDateString, IsNumber, Length } from "class-validator";
 
 export class AddressInput {
+  address_id?: number;
+
   @Length(3, 32)
   address_line1: string;
 

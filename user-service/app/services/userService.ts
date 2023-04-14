@@ -205,8 +205,25 @@ export class UserService {
 
   /* UPDATE PROFILE */
   async UpdateProfile(event: APIGatewayProxyEventV2) {
-    // business logic
-    return SuccessMessage({ message: "message from update profile" });
+    try {
+      const token = event.headers.authorization;
+      const payload = await verifyToken(token);
+      if (!payload) return ErrorMessage(403, "authorization failed!");
+
+      const input = plainToClass(ProfileInput, event.body);
+      const error = await AppValidationError(input);
+      if (error) {
+        return ErrorMessage(404, error);
+      }
+      input.age = await getAge(input.date_of_birth);
+
+      // update in DB
+      await this.repository.EditUserProfile(payload.user_id, input);
+
+      return SuccessMessage({ message: "user profile updated successfully!" });
+    } catch (err) {
+      return ErrorMessage(500, err);
+    }
   }
 
   /* CREATE CART */

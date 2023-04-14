@@ -150,7 +150,7 @@ export class UserRepository extends DbOperation {
 
     // address
     const addressQuery =
-      "SELECT address_line1, address_line2, postal_code, city, state, country FROM address WHERE user_id = $1";
+      "SELECT address_id, address_line1, address_line2, postal_code, city, state, country FROM address WHERE user_id = $1";
     const addressValues = [user_id];
     const addressResult = await this.executeQuery(addressQuery, addressValues);
 
@@ -159,5 +159,56 @@ export class UserRepository extends DbOperation {
       return userProfile;
     }
     return userProfile;
+  }
+
+  async EditUserProfile(
+    user_id: number,
+    {
+      first_name,
+      last_name,
+      age,
+      date_of_birth,
+      gender,
+      user_type,
+      address: {
+        address_id,
+        address_line1,
+        address_line2,
+        postal_code,
+        city,
+        state,
+        country,
+      },
+    }: ProfileInput
+  ) {
+    await this.UpdateUserProfile(
+      user_id,
+      first_name,
+      last_name,
+      age,
+      date_of_birth,
+      gender,
+      user_type
+    );
+
+    // add address
+    const queryString =
+      "UPDATE address SET address_line1=$1, address_line2=$2, postal_code=$3, city=$4, state=$5, country=$6 WHERE address_id=$7 RETURNING *";
+    const values = [
+      address_line1,
+      address_line2,
+      postal_code,
+      city,
+      state,
+      country,
+      address_id,
+    ];
+
+    const updatedAddress = await this.executeQuery(queryString, values);
+
+    if (updatedAddress.rowCount < 1) {
+      throw new Error("error while updating user profile!");
+    }
+    return true;
   }
 }
