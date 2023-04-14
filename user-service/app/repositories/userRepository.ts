@@ -106,7 +106,7 @@ export class UserRepository extends DbOperation {
       },
     }: ProfileInput
   ) {
-    const updatedUser = await this.UpdateUserProfile(
+    await this.UpdateUserProfile(
       user_id,
       first_name,
       last_name,
@@ -117,7 +117,6 @@ export class UserRepository extends DbOperation {
     );
 
     // add address
-
     const queryString =
       "INSERT INTO address (user_id, address_line1, address_line2, postal_code, city, state, country) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *";
     const values = [
@@ -136,5 +135,29 @@ export class UserRepository extends DbOperation {
       return updateAddress.rows[0] as AddressModel;
     }
     throw new Error("error while updating user profile!");
+  }
+
+  async GetUserProfile(user_id: number) {
+    const profileQuery =
+      "SELECT user_id, first_name, last_name, date_of_birth, age, email, phone_number, user_type, gender, profile_pic FROM users WHERE user_id = $1";
+    const profileValues = [user_id];
+    const profileResult = await this.executeQuery(profileQuery, profileValues);
+
+    if (profileResult.rowCount < 1) {
+      throw new Error("user doesn't exist!");
+    }
+    const userProfile = profileResult.rows[0] as UserModel;
+
+    // address
+    const addressQuery =
+      "SELECT address_line1, address_line2, postal_code, city, state, country FROM address WHERE user_id = $1";
+    const addressValues = [user_id];
+    const addressResult = await this.executeQuery(addressQuery, addressValues);
+
+    if (addressResult.rowCount > 0) {
+      userProfile.address = addressResult.rows as AddressModel[];
+      return userProfile;
+    }
+    return userProfile;
   }
 }

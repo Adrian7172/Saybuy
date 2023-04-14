@@ -6,7 +6,7 @@ import {
 import { APIGatewayProxyEventV2 } from "aws-lambda";
 import { UserRepository } from "../repositories/userRepository";
 import { autoInjectable } from "tsyringe";
-import { plainToClass, plainToClassFromExist } from "class-transformer";
+import { plainToClass } from "class-transformer";
 import { AppValidationError } from "../utils/errors";
 import {
   SignupInput,
@@ -165,29 +165,42 @@ export class UserService {
 
   /* CREATE PROFILE */
   async CreateProfile(event: APIGatewayProxyEventV2) {
-    const token = event.headers.authorization;
-    const payload = await verifyToken(token);
-    if (!payload) return ErrorMessage(403, "authorization failed!");
+    try {
+      const token = event.headers.authorization;
+      const payload = await verifyToken(token);
+      if (!payload) return ErrorMessage(403, "authorization failed!");
 
-    const input = plainToClass(ProfileInput, event.body);
-    const error = await AppValidationError(input);
-    if (error) {
-      return ErrorMessage(404, error);
+      const input = plainToClass(ProfileInput, event.body);
+      const error = await AppValidationError(input);
+      if (error) {
+        return ErrorMessage(404, error);
+      }
+      input.age = await getAge(input.date_of_birth);
+      // store in DB
+      const createUser = await this.repository.CreateUserProfile(
+        payload.user_id,
+        input
+      );
+
+      return SuccessMessage({ message: "user profile created successfully!" });
+    } catch (err) {
+      return ErrorMessage(500, err);
     }
-    input.age = await getAge(input.date_of_birth);
-    // store in DB
-    const createUser = await this.repository.CreateUserProfile(
-      payload.user_id,
-      input
-    );
-
-    return SuccessMessage(createUser);
   }
 
   /* GET PROFILE */
   async GetProfile(event: APIGatewayProxyEventV2) {
-    // business logic
-    return SuccessMessage({ message: "message from get profile" });
+    try {
+      const token = event.headers.authorization;
+      const payload = await verifyToken(token);
+      if (!payload) return ErrorMessage(403, "authorization failed!");
+
+      const userProfile = await this.repository.GetUserProfile(payload.user_id);
+
+      return SuccessMessage(userProfile);
+    } catch (err) {
+      return ErrorMessage(500, err);
+    }
   }
 
   /* UPDATE PROFILE */
