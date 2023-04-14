@@ -6,8 +6,10 @@ migrate-up:
 	db-migrate up
 migrate-down: 
 	db-migrate down
+create-migrate: 
+	db-migrate create $(n) --sql-file
 server:
 	npm run dev
 
 
-.PHONY: start_db stop_db server migrate-up migrate-down
+.PHONY: start_db stop_db server migrate-up migrate-down create-migrate

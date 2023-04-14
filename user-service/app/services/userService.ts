@@ -8,7 +8,12 @@ import { UserRepository } from "../repositories/userRepository";
 import { autoInjectable } from "tsyringe";
 import { plainToClass, plainToClassFromExist } from "class-transformer";
 import { AppValidationError } from "../utils/errors";
-import { SignupInput, SigninInput, VerificationInput } from "../models/dto";
+import {
+  SignupInput,
+  SigninInput,
+  VerificationInput,
+  ProfileInput,
+} from "../models/dto";
 import { genSalt } from "bcrypt";
 import { genHashPassword, validatePassword } from "../utils/password";
 import { getAge, getToken, verifyToken } from "../utils/user";
@@ -21,7 +26,7 @@ import { timeDifference } from "../utils/verifyExpiryDate";
 @autoInjectable()
 export class UserService {
   repository: UserRepository;
-  
+
   constructor(repository: UserRepository) {
     this.repository = repository;
   }
@@ -160,8 +165,23 @@ export class UserService {
 
   /* CREATE PROFILE */
   async CreateProfile(event: APIGatewayProxyEventV2) {
-    // business logic
-    return SuccessMessage({ message: "message from create profile" });
+    const token = event.headers.authorization;
+    const payload = await verifyToken(token);
+    if (!payload) return ErrorMessage(403, "authorization failed!");
+
+    const input = plainToClass(ProfileInput, event.body);
+    const error = await AppValidationError(input);
+    if (error) {
+      return ErrorMessage(404, error);
+    }
+    input.age = await getAge(input.date_of_birth);
+    // store in DB
+    const createUser = await this.repository.CreateUserProfile(
+      payload.user_id,
+      input
+    );
+
+    return SuccessMessage(createUser);
   }
 
   /* GET PROFILE */

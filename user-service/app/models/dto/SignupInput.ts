@@ -1,5 +1,5 @@
 import { SigninInput } from "./SigninInput";
-import { IsDateString, Length } from "class-validator";
+import { Length } from "class-validator";
 
 export class SignupInput extends SigninInput {
   @Length(10, 13)
