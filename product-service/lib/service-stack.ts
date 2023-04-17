@@ -12,6 +12,8 @@ interface ServiceProps {
 
 export class ServiceStack extends Construct {
   public readonly productService: NodejsFunction;
+  public readonly categoryService: NodejsFunction;
+  public readonly dealsService: NodejsFunction;
   constructor(scope: Construct, id: string, props: ServiceProps) {
     super(scope, id);
 
@@ -26,7 +28,15 @@ export class ServiceStack extends Construct {
     };
 
     this.productService = new NodejsFunction(this, "productLambda", {
-      entry: join(__dirname, "/../src/index.ts"),
+      entry: join(__dirname, "/../src/apis/product-api.ts"),
+      ...nodejsFunctionProps,
+    });
+    this.categoryService = new NodejsFunction(this, "categoryLambda", {
+      entry: join(__dirname, "/../src/apis/category-api.ts"),
+      ...nodejsFunctionProps,
+    });
+    this.dealsService = new NodejsFunction(this, "dealsLambda", {
+      entry: join(__dirname, "/../src/apis/deals-api.ts"),
       ...nodejsFunctionProps,
     });
   }
