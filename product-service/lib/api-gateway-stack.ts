@@ -20,11 +20,13 @@ export class ApiGatewayStack extends Construct {
     super(scope, id);
     this.addResources("product", props);
   }
+
   addResources(
     serviceName: string,
     { productService, categoryService, dealsService }: ApiGatewayProps
   ) {
     const apgw = new aws_apigateway.RestApi(this, `${serviceName}-ApiGtw`);
+    
     // product
     this.createEndpoints(productService, apgw, {
       name: "product",

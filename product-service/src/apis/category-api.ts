@@ -1,18 +1,33 @@
 // define lambda handler functions
 
 import { APIGatewayEvent, APIGatewayProxyResult, Context } from "aws-lambda";
+import { ProductService } from "../service/product-service";
+import { ErrorMessage } from "../utility/response";
+import { CategoryService } from "../service/category-service";
+
+const service = new CategoryService();
 
 export const handler = async (
   event: APIGatewayEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
-  console.log("EVENT: ", event);
-  console.log("CONTEXT: ", context);
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: "this is the message from category service",
-      path: `${event.path}, ${event.pathParameters}`,
-    }),
-  };
+  const isRoot = event.pathParameters === null;
+  switch (event.httpMethod.toLowerCase()) {
+    case "post":
+      if (isRoot) {
+        return service.CreateCategory(event);
+      }
+      break;
+    case "get":
+      return isRoot
+        ? service.GetAllCategories(event)
+        : service.GetCategoryById(event);
+    case "put":
+      if (!isRoot) return service.UpdateCategory(event);
+      break;
+    case "delete":
+      if (!isRoot) return service.DeleteCategory(event);
+      break;
+  }
+  return service.ResponseWithError(event);
 };

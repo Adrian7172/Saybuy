@@ -8,21 +8,27 @@ export const FormatResponse = (
       statusCode,
       headers: {
         "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
+      multiValueHeaders: undefined,
       body: JSON.stringify({
         message,
         data,
       }),
+      isBase64Encoded: undefined,
     };
   } else {
     return {
       statusCode,
       headers: {
         "Access-Control-Allow-Origin": "*",
+        "Content-Type": "application/json",
       },
+      multiValueHeaders: undefined,
       body: JSON.stringify({
         message,
       }),
+      isBase64Encoded: undefined,
     };
   }
 };
